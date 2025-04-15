@@ -1,0 +1,119 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-vector-db
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - name: redis
+      port: {{ .Values.redis.ports.redis }}
+      targetPort: {{ .Values.redis.ports.redis }}
+    - name: redis-ui
+      port: {{ .Values.redis.ports.ui }}
+      targetPort: {{ .Values.redis.ports.ui }}
+  selector:
+    app: redis-vector-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dataprep-redis-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.dataprep.port }}
+      targetPort: {{ .Values.dataprep.port }}
+  selector:
+    app: dataprep-redis-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tei-embedding-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.teiEmbedding.port }}
+      targetPort: 80
+  selector:
+    app: tei-embedding-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retriever-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.retriever.port }}
+      targetPort: {{ .Values.retriever.port }}
+  selector:
+    app: retriever
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tei-reranking-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.teiReranking.port }}
+      targetPort: 80
+  selector:
+    app: tei-reranking-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.ollama.port }}
+      targetPort: {{ .Values.ollama.port }}
+  selector:
+    app: ollama
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatqna-aipc-backend-server
+  namespace: opea-aipc
+spec:
+  ports:
+    - port: {{ .Values.chatqnaBackend.port }}
+      targetPort: {{ .Values.chatqnaBackend.port }}
+  selector:
+    app: chatqna-aipc-backend-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatqna-aipc-ui-server
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - port: {{ .Values.chatqnaUI.port }}
+      targetPort: {{ .Values.chatqnaUI.port }}
+  selector:
+    app: chatqna-aipc-ui-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatqna-aipc-nginx-server
+  namespace: {{ .Values.namespace }}
+  {{- with .Values.nginx.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.nginx.type }}
+  ports:
+    - port: {{ .Values.nginx.port }}
+      targetPort: {{ .Values.nginx.targetport }}
+      nodePort: {{ .Values.nginx.nodeport }}
+  selector:
+    app: chatqna-aipc-nginx-server

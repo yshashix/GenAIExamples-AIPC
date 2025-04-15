@@ -1,0 +1,44 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatqna-aipc-nginx-server
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.nginx.replicas }}
+  selector:
+    matchLabels:
+      app: chatqna-aipc-nginx-server
+  template:
+    metadata:
+      labels:
+        app: chatqna-aipc-nginx-server
+    spec:
+      containers:
+        - name: chatqna-aipc-nginx-server
+          image: {{ .Values.nginx.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: 80
+          env:
+            - name: FRONTEND_SERVICE_IP
+              value: chatqna-aipc-ui-server
+            - name: FRONTEND_SERVICE_PORT
+              value: {{ .Values.chatqnaUI.port | quote  }}
+            - name: BACKEND_SERVICE_NAME
+              value: chatqna
+            - name: BACKEND_SERVICE_IP
+              value: chatqna-aipc-backend-server
+            - name: BACKEND_SERVICE_PORT
+              value: {{ .Values.chatqnaBackend.port | quote  }}
+            - name: DATAPREP_SERVICE_IP
+              value: dataprep-redis-service
+            - name: DATAPREP_SERVICE_PORT
+              value: {{ .Values.dataprep.port | quote  }}
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default "" }}
+            - name: http_proxy
+              value: {{ .Values.proxy.http | default "" }}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default "" }}

@@ -1,0 +1,80 @@
+# Copyright (C) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+namespace: opea-aipc
+
+huggingface:
+  token: hf_wxxxxxxxxxxxxxxx
+
+redis:
+  image: redis/redis-stack:7.2.0-v9
+  replicas: 1
+  ports:
+    redis: 6379
+    ui: 8001
+
+dataprep:
+  image: opea/dataprep:1.2
+  replicas: 1
+  port: 5000
+  redisUrl: redis://redis-vector-db:6379
+  indexName: rag-redis
+  teiEndpoint: http://tei-embedding-service:8080
+
+teiEmbedding:
+  image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+  replicas: 1
+  port: 8080
+  modelId: BAAI/bge-base-en-v1.5
+
+teiReranking:
+  image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+  replicas: 1
+  port: 8081
+  modelId: BAAI/bge-reranker-base
+
+retriever:
+  image: opea/retriever:latest
+  replicas: 1
+  port: 7000
+  redisUrl: redis://redis-vector-db:6379
+  indexName: rag-redis
+  teiEmbeddingEndpoint: "http://tei-embedding-service:8080"
+
+ollama:
+  image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+  replicas: 1
+  port: 11434
+  storageSize: "30Gi"
+  model: "llama3.2"
+  resources:
+    gpuResourceName: gpu.intel.com/xe  # or gpu.intel.com/i915
+    requests:
+      gpu: "1"
+      memory: "12Gi"
+    limits:
+      gpu: "1"
+      memory: "14Gi"
+
+chatqnaBackend:
+  image: opea/chatqna:latest
+  replicas: 1
+  port: 8888
+
+chatqnaUI:
+  image: opea/chatqna-ui:latest
+  replicas: 1
+  port: 5173
+
+nginx:
+  image: opea/nginx:latest
+  replicas: 1
+  type: NodePort # NodePort or LoadBalancer
+  port: 8085
+  targetport: 80
+  nodeport: 30080
+  
+proxy:
+  http: "http://proxy-XXXXX.intel.com:XXX"
+  https: "http://proxy-XXX.intel.com:XXX"
+  no_proxy: "127.0.0.1,localhost,*.svc,.cluster.local,::1,chatqna-aipc-backend-server,ollama-service,tei-embedding-service,retriever-service,tei-reranking-service,redis-vector-db,dataprep-redis-service,172.28.240.0/24"

@@ -1,0 +1,81 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-storage
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ollama.storageSize }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.ollama.replicas }}
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: {{ .Values.ollama.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+          - name: http
+            containerPort: {{ .Values.ollama.port }}
+            protocol: TCP
+          resources:
+            requests:
+              {{ .Values.ollama.resources.gpuResourceName }}: {{ .Values.ollama.resources.requests.gpu }}
+              memory: {{ .Values.ollama.resources.requests.memory }}
+            limits:
+              {{ .Values.ollama.resources.gpuResourceName }}: {{ .Values.ollama.resources.limits.gpu }}
+              memory: {{ .Values.ollama.resources.limits.memory }}
+          workingDir: /llm/scripts/
+          command: ["/bin/bash", "-c"]
+          args: ["source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh && sleep 90 && cd /llm/ollama/ && ./ollama pull {{ .Values.ollama.model }} && sleep 90 && tail -f /dev/null"]
+          volumeMounts:
+            - name: ollama-storage
+              mountPath: /root/.ollama
+          startupProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.ollama.port }}
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - "curl -sf http://localhost:{{ .Values.ollama.port }}/api/tags || exit 1"
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 5
+          env:
+            - name: DEVICE
+              value: iGPU
+            - name: OLLAMA_HOST
+              value: 0.0.0.0
+            - name: OLLAMA_MODEL
+              value: {{ .Values.ollama.model }}
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default ""}}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default ""}}
+      volumes:
+        - name: ollama-storage
+          persistentVolumeClaim:
+            claimName: ollama-storage

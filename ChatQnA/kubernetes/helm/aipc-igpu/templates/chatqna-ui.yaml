@@ -1,0 +1,30 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatqna-aipc-ui-server
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.chatqnaUI.replicas }}
+  selector:
+    matchLabels:
+      app: chatqna-aipc-ui-server
+  template:
+    metadata:
+      labels:
+        app: chatqna-aipc-ui-server
+    spec:
+      containers:
+        - name: chatqna-aipc-ui-server
+          image: {{ .Values.chatqnaUI.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: {{ .Values.chatqnaUI.port }}
+          env:
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default "" }}
+            - name: http_proxy
+              value: {{ .Values.proxy.http | default "" }}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default "" }}

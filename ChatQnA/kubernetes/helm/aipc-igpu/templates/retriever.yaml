@@ -1,0 +1,51 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retriever
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.retriever.replicas }}
+  selector:
+    matchLabels:
+      app: retriever
+  template:
+    metadata:
+      labels:
+        app: retriever
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox
+          command: ['sh', '-c', 'until nc -z redis-vector-db {{ .Values.redis.ports.redis }}; do sleep 2; done']
+      containers:
+        - name: retriever
+          image: {{ .Values.retriever.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: {{ .Values.retriever.port }}
+          env:
+            - name: REDIS_URL
+              value: {{ .Values.retriever.redisUrl | quote  }}
+            - name: REDIS_HOST
+              value: redis-vector-db
+            - name: INDEX_NAME
+              value: {{ .Values.retriever.indexName | quote  }}
+            - name: TEI_EMBEDDING_ENDPOINT
+              value: {{ .Values.retriever.teiEmbeddingEndpoint | quote  }}
+            - name: HUGGINGFACEHUB_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: huggingface-secret
+                  key: HUGGINGFACEHUB_API_TOKEN
+            - name: LOGFLAG
+              value: ""
+            - name: RETRIEVER_COMPONENT_NAME
+              value: "OPEA_RETRIEVER_REDIS"
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default ""}}
+            - name: http_proxy
+              value: {{ .Values.proxy.http | default ""}}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default ""}}

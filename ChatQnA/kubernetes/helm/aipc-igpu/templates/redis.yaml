@@ -1,0 +1,29 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-vector-db
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.redis.replicas }}
+  selector:
+    matchLabels:
+      app: redis-vector-db
+  template:
+    metadata:
+      labels:
+        app: redis-vector-db
+    spec:
+      containers:
+        - name: redis-vector-db
+          image: {{ .Values.redis.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: {{ .Values.redis.ports.redis }}
+            - containerPort: {{ .Values.redis.ports.ui }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.redis.ports.redis }}
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,39 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tei-reranking-service
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.teiReranking.replicas }}
+  selector:
+    matchLabels:
+      app: tei-reranking-service
+  template:
+    metadata:
+      labels:
+        app: tei-reranking-service
+    spec:
+      containers:
+        - name: tei-reranking-service
+          image: {{ .Values.teiReranking.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+          env:
+            - name: RERANK_MODEL_ID
+              value: {{ .Values.teiReranking.modelId | quote  }}
+            - name: http_proxy
+              value: {{ .Values.proxy.http | default ""}}
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default ""}}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default ""}}
+          command: ["text-embeddings-router", "--model-id", {{ .Values.teiReranking.modelId }}, "--auto-truncate"]
+      volumes:
+        - name: data-volume
+          emptyDir: {}

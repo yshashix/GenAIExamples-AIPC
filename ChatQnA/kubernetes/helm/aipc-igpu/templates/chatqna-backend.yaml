@@ -1,0 +1,68 @@
+# Copyright (C) 2025 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatqna-aipc-backend-server
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.chatqnaBackend.replicas }}
+  selector:
+    matchLabels:
+      app: chatqna-aipc-backend-server
+  template:
+    metadata:
+      labels:
+        app: chatqna-aipc-backend-server
+    spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox
+          command: ['sh', '-c', 'until nc -z redis-vector-db {{ .Values.redis.ports.redis }}; do sleep 2; done']
+        - name: wait-for-dataprep
+          image: busybox
+          command: ['sh', '-c', 'until nc -z dataprep-redis-service {{ .Values.dataprep.port }}; do sleep 2; done']
+        - name: wait-for-tei-embedding
+          image: busybox
+          command: ['sh', '-c', 'until nc -z tei-embedding-service {{ .Values.teiEmbedding.port }}; do sleep 5; done']
+        - name: wait-for-retriever
+          image: busybox
+          command: ['sh', '-c', 'until nc -z retriever-service {{ .Values.retriever.port }}; do sleep 5; done']
+        - name: wait-for-ollama
+          image: busybox
+          command: ['sh', '-c', 'until nc -z ollama-service {{ .Values.ollama.port }}; do sleep 5; done']
+      containers:
+        - name: chatqna-aipc-backend-server
+          image: {{ .Values.chatqnaBackend.image }}
+          imagePullPolicy: IfNotPresent  # Options: Always | IfNotPresent | Never
+          ports:
+            - containerPort: {{ .Values.chatqnaBackend.port }}
+          env:
+            - name: MEGA_SERVICE_HOST_IP
+              value: chatqna-aipc-backend-server
+            - name: EMBEDDING_SERVER_HOST_IP
+              value: tei-embedding-service
+            - name: EMBEDDING_SERVER_PORT
+              value: {{ .Values.teiEmbedding.port | quote  }}
+            - name: RETRIEVER_SERVICE_HOST_IP
+              value: retriever-service
+            - name: RETRIEVER_SERVICE_PORT
+              value: {{ .Values.retriever.port | quote  }}
+            - name: RERANK_SERVER_HOST_IP
+              value: tei-reranking-service
+            - name: RERANK_SERVER_PORT
+              value: {{ .Values.teiReranking.port | quote  }}
+            - name: LLM_SERVER_HOST_IP
+              value: ollama-service
+            - name: LLM_SERVER_PORT
+              value: {{ .Values.ollama.port | quote  }}
+            - name: LLM_MODEL
+              value: {{ .Values.ollama.model }}
+            - name: LOGFLAG
+              value: ""
+            - name: https_proxy
+              value: {{ .Values.proxy.https | default "" }}
+            - name: http_proxy
+              value: {{ .Values.proxy.http | default "" }}
+            - name: no_proxy
+              value: {{ .Values.proxy.no_proxy | default "" }}
